@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lab 20 – Multi-Agent Research System</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: #e2e8f0; line-height: 1.6; }
+
+    header { background: linear-gradient(135deg, #1e3a5f, #0f172a); padding: 2.5rem 2rem 2rem; border-bottom: 1px solid #1e40af; }
+    header h1 { font-size: 1.8rem; color: #60a5fa; }
+    header p  { color: #94a3b8; margin-top: .3rem; font-size: .95rem; }
+    .badge { display: inline-block; background: #1e3a5f; border: 1px solid #2563eb; color: #93c5fd; border-radius: 9999px; padding: .2rem .75rem; font-size: .78rem; margin-top: .6rem; margin-right: .4rem; }
+
+    main { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+    h2 { font-size: 1.25rem; color: #93c5fd; margin: 2.5rem 0 1rem; border-left: 3px solid #2563eb; padding-left: .75rem; }
+    h3 { font-size: 1rem; color: #7dd3fc; margin: 1.5rem 0 .5rem; }
+
+    /* Architecture diagram */
+    .arch { background: #0f2040; border: 1px solid #1e3a5f; border-radius: .75rem; padding: 1.5rem; font-family: monospace; font-size: .85rem; color: #67e8f9; white-space: pre; overflow-x: auto; }
+
+    /* Benchmark table */
+    .bench-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1rem; }
+    .card { background: #1e293b; border: 1px solid #334155; border-radius: .75rem; padding: 1.25rem 1rem; text-align: center; }
+    .card .label { font-size: .78rem; color: #94a3b8; text-transform: uppercase; letter-spacing: .05em; }
+    .card .val-single { font-size: 1.5rem; font-weight: 700; color: #34d399; margin-top: .3rem; }
+    .card .val-multi  { font-size: 1.5rem; font-weight: 700; color: #f87171; margin-top: .1rem; }
+    .card .sub { font-size: .75rem; color: #64748b; margin-top: .2rem; }
+
+    /* Results comparison table */
+    table { width: 100%; border-collapse: collapse; font-size: .9rem; margin-top: .75rem; }
+    th { background: #1e3a5f; color: #93c5fd; padding: .6rem .9rem; text-align: left; font-weight: 600; }
+    td { padding: .55rem .9rem; border-bottom: 1px solid #1e293b; }
+    tr:last-child td { border-bottom: none; }
+    tr:nth-child(even) td { background: #0f1e35; }
+    .good { color: #34d399; }
+    .bad  { color: #f87171; }
+
+    /* Trace timeline */
+    .timeline { display: flex; flex-direction: column; gap: .6rem; margin-top: .75rem; }
+    .step { display: flex; align-items: flex-start; gap: .9rem; }
+    .dot  { width: 2rem; height: 2rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .75rem; font-weight: 700; flex-shrink: 0; margin-top: .1rem; }
+    .dot.sup { background: #312e81; color: #a5b4fc; }
+    .dot.res { background: #14532d; color: #86efac; }
+    .dot.ana { background: #78350f; color: #fcd34d; }
+    .dot.wri { background: #7f1d1d; color: #fca5a5; }
+    .step-body { flex: 1; }
+    .step-name { font-weight: 600; color: #e2e8f0; font-size: .9rem; }
+    .step-meta { font-size: .78rem; color: #64748b; margin-top: .1rem; }
+    .connector { width: 2rem; display: flex; justify-content: center; flex-shrink: 0; }
+    .connector::before { content: ''; display: block; width: 2px; height: 1rem; background: #334155; margin: 0 auto; }
+
+    /* Failure modes */
+    .failures { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; margin-top: .75rem; }
+    .fail-card { background: #1e293b; border: 1px solid #334155; border-radius: .5rem; padding: 1rem; }
+    .fail-card .title { font-weight: 600; color: #fbbf24; font-size: .88rem; margin-bottom: .35rem; }
+    .fail-card .fix   { font-size: .82rem; color: #94a3b8; }
+    .fail-card .fix span { color: #34d399; font-family: monospace; }
+
+    /* Conclusion */
+    .conclusion-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: .75rem; }
+    .con-box { background: #1e293b; border-radius: .75rem; padding: 1.25rem; }
+    .con-box.yes { border-top: 3px solid #34d399; }
+    .con-box.no  { border-top: 3px solid #f87171; }
+    .con-box h4  { font-size: .95rem; margin-bottom: .6rem; }
+    .con-box.yes h4 { color: #34d399; }
+    .con-box.no  h4 { color: #f87171; }
+    .con-box ul  { padding-left: 1.1rem; font-size: .85rem; color: #94a3b8; }
+    .con-box ul li { margin-bottom: .3rem; }
+
+    footer { text-align: center; color: #334155; font-size: .8rem; padding: 2rem; border-top: 1px solid #1e293b; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Lab 20 – Multi-Agent Research System</h1>
+  <p>Benchmark Report: Single-Agent vs Multi-Agent Workflow</p>
+  <span class="badge">Hoang Phuc Quan</span>
+  <span class="badge">2A202600560</span>
+  <span class="badge">2026-06-24</span>
+  <span class="badge">gpt-4o-mini</span>
+  <span class="badge">LangGraph</span>
+</header>
+
+<main>
+
+  <!-- ARCHITECTURE -->
+  <h2>Architecture</h2>
+  <div class="arch">User Query
+    |
+    v
+Supervisor / Router
+    |──────► Researcher Agent  →  search sources  →  research_notes
+    |──────► Analyst Agent     →  extract claims  →  analysis_notes
+    |──────► Writer Agent      →  synthesise      →  final_answer
+    |
+    v
+Trace + Benchmark Report</div>
+
+  <!-- BENCHMARK METRICS -->
+  <h2>Benchmark Results</h2>
+  <p style="color:#94a3b8;font-size:.88rem;margin-bottom:.75rem;">Query: <em>"What is GraphRAG and how does it work?"</em></p>
+
+  <div class="bench-grid">
+    <div class="card">
+      <div class="label">Latency</div>
+      <div class="val-single">10.91 s</div>
+      <div class="sub">Single-Agent</div>
+      <div class="val-multi">30.80 s</div>
+      <div class="sub">Multi-Agent (+2.8×)</div>
+    </div>
+    <div class="card">
+      <div class="label">Est. Cost (USD)</div>
+      <div class="val-single">$0.000413</div>
+      <div class="sub">Single-Agent</div>
+      <div class="val-multi">$0.001233</div>
+      <div class="sub">Multi-Agent (+3×)</div>
+    </div>
+    <div class="card">
+      <div class="label">LLM Calls</div>
+      <div class="val-single">1</div>
+      <div class="sub">Single-Agent</div>
+      <div class="val-multi">3</div>
+      <div class="sub">Multi-Agent</div>
+    </div>
+  </div>
+
+  <table style="margin-top:1.25rem;">
+    <thead><tr><th>Metric</th><th>Single-Agent</th><th>Multi-Agent</th><th>Winner</th></tr></thead>
+    <tbody>
+      <tr><td>Latency (s)</td><td>10.91</td><td>30.80</td><td class="good">Single</td></tr>
+      <tr><td>Est. Cost (USD)</td><td>0.000413</td><td>0.001233</td><td class="good">Single</td></tr>
+      <tr><td>LLM calls</td><td>1</td><td>3</td><td class="good">Single</td></tr>
+      <tr><td>Sources cited</td><td>0</td><td>3</td><td class="good">Multi</td></tr>
+      <tr><td>Structured notes</td><td>No</td><td>Yes (research + analysis)</td><td class="good">Multi</td></tr>
+      <tr><td>Traceable steps</td><td>No</td><td>Yes (7 trace events)</td><td class="good">Multi</td></tr>
+      <tr><td>Errors</td><td>0</td><td>0</td><td>Tie</td></tr>
+    </tbody>
+  </table>
+
+  <!-- TRACE -->
+  <h2>Agent Trace (Multi-Agent Run)</h2>
+  <div class="timeline">
+    <div class="step">
+      <div class="dot sup">SUP</div>
+      <div class="step-body">
+        <div class="step-name">Supervisor — route: researcher</div>
+        <div class="step-meta">iteration=1 · decision: research_notes is None → call Researcher</div>
+      </div>
+    </div>
+    <div class="step"><div class="connector"></div></div>
+    <div class="step">
+      <div class="dot res">RES</div>
+      <div class="step-body">
+        <div class="step-name">Researcher — search + summarise</div>
+        <div class="step-meta">sources_found=3 · input_tokens=163 · output_tokens=427</div>
+      </div>
+    </div>
+    <div class="step"><div class="connector"></div></div>
+    <div class="step">
+      <div class="dot sup">SUP</div>
+      <div class="step-body">
+        <div class="step-name">Supervisor — route: analyst</div>
+        <div class="step-meta">iteration=2 · decision: analysis_notes is None → call Analyst</div>
+      </div>
+    </div>
+    <div class="step"><div class="connector"></div></div>
+    <div class="step">
+      <div class="dot ana">ANA</div>
+      <div class="step-body">
+        <div class="step-name">Analyst — extract claims &amp; evidence</div>
+        <div class="step-meta">input_tokens=500 · output_tokens=541</div>
+      </div>
+    </div>
+    <div class="step"><div class="connector"></div></div>
+    <div class="step">
+      <div class="dot sup">SUP</div>
+      <div class="step-body">
+        <div class="step-name">Supervisor — route: writer</div>
+        <div class="step-meta">iteration=3 · decision: final_answer is None → call Writer</div>
+      </div>
+    </div>
+    <div class="step"><div class="connector"></div></div>
+    <div class="step">
+      <div class="dot wri">WRI</div>
+      <div class="step-body">
+        <div class="step-name">Writer — synthesise final answer</div>
+        <div class="step-meta">input_tokens=1070 · output_tokens=740</div>
+      </div>
+    </div>
+    <div class="step"><div class="connector"></div></div>
+    <div class="step">
+      <div class="dot sup">SUP</div>
+      <div class="step-body">
+        <div class="step-name">Supervisor — route: done</div>
+        <div class="step-meta">iteration=4 · all fields filled → stop</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAILURE MODES -->
+  <h2>Failure Modes &amp; Fixes</h2>
+  <div class="failures">
+    <div class="fail-card">
+      <div class="title">Infinite loop</div>
+      <div class="fix">Supervisor keeps routing without progress.<br>Fix: <span>max_iterations=6</span> guard in SupervisorAgent.</div>
+    </div>
+    <div class="fail-card">
+      <div class="title">Agent crash</div>
+      <div class="fix">LLM call raises an exception mid-workflow.<br>Fix: <span>try/except</span> in each agent; error appended to <span>state.errors</span>.</div>
+    </div>
+    <div class="fail-card">
+      <div class="title">No search key</div>
+      <div class="fix">Tavily API key missing or invalid.<br>Fix: SearchClient auto-falls back to <span>mock documents</span>.</div>
+    </div>
+    <div class="fail-card">
+      <div class="title">Cascading errors</div>
+      <div class="fix">Multiple agent failures in a row.<br>Fix: Supervisor stops routing when <span>len(errors) ≥ 3</span>.</div>
+    </div>
+  </div>
+
+  <!-- DEMO: PROMPT 4 -->
+  <h2>Demo Run — Prompt 4: Survey Paper Blueprint</h2>
+  <p style="color:#94a3b8;font-size:.88rem;margin-bottom:1rem;">
+    Complex multi-step prompt: generate a full survey paper blueprint with abstract, 7-section outline, evaluation gaps, and benchmark design.
+  </p>
+
+  <!-- Trace for this run -->
+  <h3>Agent Trace</h3>
+  <div class="timeline">
+    <div class="step">
+      <div class="dot sup">SUP</div>
+      <div class="step-body">
+        <div class="step-name">Supervisor — route: researcher</div>
+        <div class="step-meta">iteration=1 · research_notes is None</div>
+      </div>
+    </div>
+    <div class="step"><div class="connector"></div></div>
+    <div class="step">
+      <div class="dot res">RES</div>
+      <div class="step-body">
+        <div class="step-name">Researcher — summarise sources into research notes</div>
+        <div class="step-meta">sources_found=3 · input_tokens=815 · output_tokens=1,145</div>
+      </div>
+    </div>
+    <div class="step"><div class="connector"></div></div>
+    <div class="step">
+      <div class="dot sup">SUP</div>
+      <div class="step-body">
+        <div class="step-name">Supervisor — route: analyst</div>
+        <div class="step-meta">iteration=2 · analysis_notes is None</div>
+      </div>
+    </div>
+    <div class="step"><div class="connector"></div></div>
+    <div class="step">
+      <div class="dot ana">ANA</div>
+      <div class="step-body">
+        <div class="step-name">Analyst — extract key claims, compare viewpoints, flag gaps</div>
+        <div class="step-meta">input_tokens=1,381 · output_tokens=692</div>
+      </div>
+    </div>
+    <div class="step"><div class="connector"></div></div>
+    <div class="step">
+      <div class="dot sup">SUP</div>
+      <div class="step-body">
+        <div class="step-name">Supervisor — route: writer</div>
+        <div class="step-meta">iteration=3 · final_answer is None</div>
+      </div>
+    </div>
+    <div class="step"><div class="connector"></div></div>
+    <div class="step">
+      <div class="dot wri">WRI</div>
+      <div class="step-body">
+        <div class="step-name">Writer — synthesise final survey blueprint</div>
+        <div class="step-meta">input_tokens=2,102 · output_tokens=946</div>
+      </div>
+    </div>
+    <div class="step"><div class="connector"></div></div>
+    <div class="step">
+      <div class="dot sup">SUP</div>
+      <div class="step-body">
+        <div class="step-name">Supervisor — route: done</div>
+        <div class="step-meta">iteration=4 · all fields filled · errors=0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Token summary -->
+  <div class="bench-grid" style="margin-top:1.25rem;">
+    <div class="card">
+      <div class="label">Total Input Tokens</div>
+      <div class="val-multi" style="color:#60a5fa;">4,298</div>
+      <div class="sub">815 + 1,381 + 2,102</div>
+    </div>
+    <div class="card">
+      <div class="label">Total Output Tokens</div>
+      <div class="val-multi" style="color:#60a5fa;">2,783</div>
+      <div class="sub">1,145 + 692 + 946</div>
+    </div>
+    <div class="card">
+      <div class="label">Est. Cost (USD)</div>
+      <div class="val-multi" style="color:#60a5fa;">~$0.00231</div>
+      <div class="sub">gpt-4o-mini pricing</div>
+    </div>
+  </div>
+
+  <!-- Final answer output -->
+  <h3 style="margin-top:1.5rem;">Final Answer (Writer Output)</h3>
+  <div style="background:#0f2040;border:1px solid #1e3a5f;border-radius:.75rem;padding:1.5rem;margin-top:.5rem;font-size:.85rem;color:#cbd5e1;line-height:1.7;max-height:520px;overflow-y:auto;">
+    <p><strong style="color:#93c5fd;">Paper Title:</strong> AI Agents for Research Assistance: Capabilities, Evaluation, and Open Problems</p>
+    <br>
+    <p><strong style="color:#93c5fd;">Draft Abstract</strong></p>
+    <p>This survey explores the growing role of AI agents in research assistance, emphasizing capabilities, evaluation methodologies, and existing challenges. AI agents enhance research workflows through automation of literature reviews, information synthesis, and analytical insights. However, quantifying their performance remains a significant challenge — many existing evaluations are neither comprehensive nor standardized. This paper reviews current advancements, highlights practical applications, discusses evaluation gaps, and proposes a framework for future benchmarking.</p>
+    <br>
+    <p><strong style="color:#93c5fd;">Section Outline</strong></p>
+    <ol style="padding-left:1.2rem;">
+      <li style="margin-bottom:.6rem;"><strong>Introduction</strong> — Define AI agents, trace their evolution in research contexts. <em>Open problem:</em> no standard classification of agent types for research tasks.</li>
+      <li style="margin-bottom:.6rem;"><strong>Capabilities of AI Agents</strong> — Automation, synthesis, personalised assistance. <em>Open problem:</em> qualitative analysis remains underserved.</li>
+      <li style="margin-bottom:.6rem;"><strong>State of the Art</strong> — Leading models, tools, algorithms; comparative performance. <em>Open problem:</em> no comprehensive cross-system benchmark exists.</li>
+      <li style="margin-bottom:.6rem;"><strong>Practical Applications &amp; Case Studies</strong> — Healthcare, social sciences, engineering. <em>Pitfall:</em> cherry-picking success stories over documented failures.</li>
+      <li style="margin-bottom:.6rem;"><strong>Evaluation Methodologies</strong> — Quality metrics, precision/recall, user satisfaction. <em>Open problem:</em> standardised frameworks missing.</li>
+      <li style="margin-bottom:.6rem;"><strong>Evaluation Gaps</strong> — Inconsistency, no longitudinal studies, neglect of user-centric metrics.</li>
+      <li style="margin-bottom:.6rem;"><strong>Future Benchmarks</strong> — Comprehensive outcomes: effectiveness, efficiency, user satisfaction, scalability, cross-domain flexibility.</li>
+    </ol>
+  </div>
+
+  <!-- CONCLUSION -->
+  <h2>Exit Ticket</h2>
+  <div class="conclusion-grid">
+    <div class="con-box yes">
+      <h4>✓ Use Multi-Agent when…</h4>
+      <ul>
+        <li>Query requires distinct phases: gather → analyse → write</li>
+        <li>Traceability and auditability are required</li>
+        <li>Each phase needs a specialised system prompt</li>
+        <li>Latency and cost are not the primary constraints</li>
+      </ul>
+    </div>
+    <div class="con-box no">
+      <h4>✗ Avoid Multi-Agent when…</h4>
+      <ul>
+        <li>Query is simple or self-contained</li>
+        <li>Low latency is critical (chatbot, real-time API)</li>
+        <li>Cost per query must be minimised at scale</li>
+        <li>Coordination overhead exceeds the benefit</li>
+      </ul>
+    </div>
+  </div>
+
+</main>
+
+<footer>Lab 20 · VinUniversity AI Lab · Phase 2 Day 5 · Hoang Phuc Quan 2A202600560</footer>
+
+</body>
+</html>
